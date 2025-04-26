@@ -7,7 +7,7 @@ import matplotlib as mpl # 导入 matplotlib 主模块以设置参数
 A = 5.57e-20      # Hamaker 常数 (J)
 r = 6.63e-9       # 颗粒半径 (m)
 kB = 1.38e-23     # 玻尔兹曼常数 (J/K)
-T = 291.18        # 温度 (K) approx 18 C
+T = 298.15        # 温度 (K) approx 25 C
 # --- Zeta 电位 ---
 # !!! 注意：这里使用的是之前代码中的通用值。
 # !!! 如果 0.3 mM NaCl 有特定的 Zeta 电位值，请在此处修改。
