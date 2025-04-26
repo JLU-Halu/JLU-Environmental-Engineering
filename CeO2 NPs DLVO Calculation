@@ -1,0 +1,146 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl # 导入 matplotlib 主模块以设置参数
+
+# --- Define Constants and Parameters (SI units) ---
+# 基于用户提供的第二份表格，并进行了修正/统一
+A = 5.57e-20      # Hamaker 常数 (J)
+r = 6.63e-9       # 颗粒半径 (m)
+kB = 1.38e-23     # 玻尔兹曼常数 (J/K)
+T = 291.18        # 温度 (K) approx 18 C
+# --- Zeta 电位 ---
+# !!! 注意：这里使用的是之前代码中的通用值。
+# !!! 如果 0.3 mM NaCl 有特定的 Zeta 电位值，请在此处修改。
+target_zeta = -1.14e-2   # Zeta 电位 (V) - 用于 0.3 mM NaCl 计算
+# --- 其他常数 ---
+e = 1.60e-19      # 元电荷 (C)
+z = 1             # 离子价态 (NaCl 为 1)
+eps0 = 8.85e-12   # 真空介电常数 (F/m)
+epsr = 80         # 水的相对介电常数
+eps = eps0 * epsr # 水的绝对介电常数 (F/m)
+NA = 6.02e+23     # 阿伏伽德罗常数 (mol^-1)
+pi = np.pi
+
+# 计算热能 kBT
+kBT = kB * T
+
+# --- Helper Functions (与之前相同) ---
+def calculate_kappa(I_molar):
+    """根据离子强度 I (mol/L) 计算 Debye-Huckel 参数 kappa (m^-1)。"""
+    if I_molar <= 0: return 0
+    I_m3 = I_molar * 1000
+    kappa_sq = (2 * e**2 * NA * I_m3) / (eps * kBT)
+    if kappa_sq <= 0: return 0
+    return np.sqrt(kappa_sq)
+
+def calculate_n_total_ions(I_molar):
+    """计算 1:1 电解质的总离子数浓度 n (ions/m^3)。"""
+    if I_molar <= 0: return 0
+    I_m3 = I_molar * 1000
+    n_total = 2 * I_m3 * NA
+    return n_total
+
+def phi_edl(H, n, kappa, zeta_potential):
+    """根据提供的公式计算 EDL 相互作用能 (J)。"""
+    if kappa <= 1e-9: return np.zeros_like(H)
+    term_exp_kappa = np.exp(-kappa * H)
+    exp_arg = (z * e * zeta_potential) / (2 * kBT)
+    exp_val = np.exp(np.clip(exp_arg, -700, 700))
+    zeta_term_numerator = exp_val - 1
+    zeta_term_denominator = exp_val + 1
+    zeta_term = zeta_term_numerator / zeta_term_denominator
+    prefactor = (64 * pi * n * r * kBT) / (kappa**2)
+    return prefactor * term_exp_kappa * zeta_term**2
+
+def phi_vdw(H, A_const, radius):
+    """计算范德华 (Van der Waals) 相互作用能 (J)。"""
+    H_safe = np.maximum(H, 1e-12)
+    H2 = H_safe**2
+    rH4 = 4 * radius * H_safe
+    r24 = 4 * radius**2
+    denominator1 = H2 + rH4
+    denominator2 = H2 + rH4 + r24
+    term1 = (2 * radius**2) / denominator1
+    term2 = (2 * radius**2) / denominator2
+    log_argument_numerator = H2 + rH4
+    log_argument_denominator = H2 + rH4 + r24
+    log_argument = np.maximum(log_argument_numerator / log_argument_denominator, 1e-30)
+    term3 = np.log(log_argument)
+    return -(A_const / 6.0) * (term1 + term2 + term3)
+
+def phi_total_normalized(H, n, kappa, zeta_potential, A_const, radius, kBT_val):
+    """计算归一化的总 DLVO 能量 (单位: kBT)。"""
+    if kBT_val == 0: return np.zeros_like(H)
+    edl = phi_edl(H, n, kappa, zeta_potential)
+    vdw = phi_vdw(H, A_const, radius)
+    return (edl + vdw) / kBT_val
+
+# --- 设置字体和字号参数 ---
+try:
+    mpl.rcParams['font.family'] = 'sans-serif'
+    mpl.rcParams['font.sans-serif'] = ['Arial'] # 尝试使用 Arial
+    mpl.rcParams['font.size'] = 12          # 基础字号
+    mpl.rcParams['axes.labelsize'] = 14      # 坐标轴标签字号
+    mpl.rcParams['xtick.labelsize'] = 12     # X 轴刻度字号
+    mpl.rcParams['ytick.labelsize'] = 12     # Y 轴刻度字号
+    mpl.rcParams['legend.fontsize'] = 12     # 图例字号
+    mpl.rcParams['axes.titlesize'] = 16      # 标题字号
+    mpl.rcParams['mathtext.default'] = 'regular'
+except Exception as e:
+    print(f"警告: 无法设置 Arial 字体，可能系统中未安装。将使用默认字体。错误: {e}")
+    # 字体设置失败时的后备字号设置
+    mpl.rcParams['font.size'] = 12
+    mpl.rcParams['axes.labelsize'] = 14
+    mpl.rcParams['xtick.labelsize'] = 12
+    mpl.rcParams['ytick.labelsize'] = 12
+    mpl.rcParams['legend.fontsize'] = 12
+    mpl.rcParams['axes.titlesize'] = 16
+
+# --- 主要计算逻辑 (仅针对 0.3 mM NaCl) ---
+
+target_concentration_M = 0.0003 # 0.3 mM 等于 0.0003 mol/L
+target_label = "NaCl 0.3 mmol/L"
+
+print(f"开始计算 DLVO: {target_label}")
+print(f"使用的 Zeta 电位 = {target_zeta:.3e} V") # 打印当前使用的 Zeta 电位值
+
+# 计算该浓度下的 kappa 和 n
+kappa_03 = calculate_kappa(target_concentration_M)
+n_03 = calculate_n_total_ions(target_concentration_M)
+print(f"  计算得到: kappa={kappa_03:.2e} m^-1, n={n_03:.2e} m^-3")
+
+# 定义颗粒间距范围
+H_nm = np.linspace(0.1, 60, 200) # 距离 (nm)
+H_m = H_nm * 1e-9             # 转换为米 (m)
+
+# 计算 DLVO 能量曲线
+phi_norm_03 = phi_total_normalized(H_m, n_03, kappa_03, target_zeta, A, r, kBT)
+print("计算完成。")
+
+# --- 绘图 ---
+print("正在生成图像...")
+plt.figure(figsize=(8, 6))
+
+# 定义此曲线的绘图样式 (例如: 蓝色虚线)
+plot_style = {"color": "darkblue", "linestyle": ":"}
+
+# 绘制计算结果
+plt.plot(H_nm, phi_norm_03, label=target_label,
+         color=plot_style.get("color"),
+         linestyle=plot_style.get("linestyle")
+         )
+
+# --- 自定义图像 ---
+plt.xlabel('d (nm)')
+plt.ylabel(r'$\Phi_{net} \; (k_B T)$') # 使用原始字符串
+plt.title(f'DLVO Interaction Energy for CeO2 NPs ({target_label})') # 更新标题
+plt.legend() # 显示图例
+plt.axhline(0, color='black', linewidth=0.5, linestyle='--') # y=0 参考线
+plt.ylim(-50, 30) # 根据需要调整 Y 轴范围
+plt.xlim(0, 60)   # X 轴范围
+plt.grid(False)   # 不显示网格
+
+# --- 显示图像 ---
+print("正在显示图像...")
+plt.show()
+print("图像窗口已关闭。")
