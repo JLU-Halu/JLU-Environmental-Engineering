@@ -5,7 +5,7 @@ import matplotlib as mpl # 导入 matplotlib 主模块以设置参数
 # --- Define Constants and Parameters (SI units) ---
 # 基于用户提供的第二份表格，并进行了修正/统一
 A = 5.57e-20      # Hamaker 常数 (J)
-r = 6.35e-8       # 颗粒半径 (m) （激光粒度仪测定，不同样品数值有波动）
+r = 6.63e-9       # 颗粒半径 (m) （激光粒度仪测定，不同样品数值有波动）
 kB = 1.38e-23     # 玻尔兹曼常数 (J/K)
 T = 298.15        # 温度 (K) approx 25 C
 # --- Zeta 电位 ---
