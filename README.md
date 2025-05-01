@@ -4,4 +4,4 @@
  
 	GB3095-2012_IAQI_O3_8h.py 适用课程：环境监测（依据GB3095-2012计算的IAQI分指数，臭氧采用1小时浓度，其他污染物采用24小时浓度）  感谢252204班MYH同学  
 
- 	CeO2 NPs DLVO Calculation 适用课程：开放性创新实验《混凝去除水中纳米颗粒》，以CeO2 NPs 在NaCl 3 mM时为例，CeO2的哈梅克常数参照文献取值。
+ 	CeO2 NPs DLVO Calculation 适用课程：开放性创新实验《混凝去除水中纳米颗粒》，以CeO2 NPs 在NaCl 3 mM时为例，CeO2的哈梅克常数参照文献取值。如果有不完善之处，请积极指导。
